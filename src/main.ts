@@ -24,7 +24,8 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(3000);
-  console.log(`\n🚀 ProScient NestJS Backend is running on: http://localhost:3000/api`);
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  console.log(`\n🚀 ProScient NestJS Backend is running on port: ${port}/api`);
 }
 bootstrap();
