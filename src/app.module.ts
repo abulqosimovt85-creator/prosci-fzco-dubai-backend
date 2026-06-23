@@ -11,6 +11,7 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { BrandsModule } from './modules/brands/brands.module';
 import { InquiriesModule } from './modules/inquiries/inquiries.module';
 import { AiModule } from './modules/ai/ai.module';
+import { UploadModule } from './modules/upload/upload.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { AiModule } from './modules/ai/ai.module';
     BrandsModule,
     InquiriesModule,
     AiModule,
+    UploadModule,
   ],
 })
 export class AppModule {}
