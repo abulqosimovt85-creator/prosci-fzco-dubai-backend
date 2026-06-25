@@ -163,68 +163,62 @@ export class AiService {
         'NOTE: The text below was extracted from a web page. Extract ONLY what is explicitly written here.';
     }
 
-    const prompt = `You are an expert product data extraction assistant for a professional scientific/industrial equipment catalog. Your task is to extract ALL relevant product information from the source text below.
-${sourceNote ? `\n${sourceNote}\n` : ''}
-CRITICAL RULE — ACCURATE EXTRACTION:
-You must ONLY extract information that is EXPLICITLY stated in the source text below. Do NOT add information from your training data or general knowledge. However, you MUST be thorough — extract every specification, feature, and detail that IS present in the source. Missing information that exists in the source is just as bad as hallucinating information that doesn't exist.
+    const prompt = `TASK: Extract product data from the text below into JSON. This is for a professional scientific/industrial equipment catalog.
 
-Return ONLY a valid JSON object with this exact structure:
+CRITICAL RULES — READ CAREFULLY:
+1. ONLY extract text that APPEARS IN THE SOURCE. Do NOT invent, guess, or use your training knowledge.
+2. Look for specification tables — they often have rows like "Parameter name [TAB/COLON] Value" or "| Parameter | Value |". Extract ALL of these as specifications.
+3. If you cannot find a specific piece of information in the source text, DO NOT include it. An empty specifications array is better than fake data.
+4. NEVER output specifications like "USB", "RS-232", "CE", "ISO 9001" unless those exact strings appear in the source text. These are common hallucinations — do NOT add them.
+
+SOURCE TEXT ANALYSIS — Look for these patterns in the text:
+- Table rows with labels and values (e.g., "Electron gun [TAB] Cold field emission gun")
+- Lines with "key: value" or "key [TAB] value" format
+- Numbered or bulleted specification lists
+- Sections titled "Specifications", "Technical Data", "Features", etc.
+
+Return ONLY a valid JSON object:
 {
-  "name": "Product model name/number only (no manufacturer)",
-  "description": "Comprehensive 3-5 sentence product description based on source text",
+  "name": "Product model name/number ONLY (no manufacturer name)",
+  "description": "3-5 sentences describing the product using ONLY facts from the source",
   "specifications": [
-    { "key": "Manufacturer", "value": "Manufacturer/brand name" },
-    { "key": "Parameter name", "value": "Value with unit" }
+    { "key": "Exact parameter name from source", "value": "Exact value from source" }
   ],
-  "application": "Intended applications and use cases from source",
+  "application": "Intended applications ONLY if explicitly stated in source",
   "isFeatured": false
 }
 
-EXTRACTION RULES — BE THOROUGH:
-1. SPECIFICATIONS: Extract EVERY parameter, measurement, and specification mentioned in the source
-   - Include ALL technical specifications: dimensions, weight, power, voltage, current, frequency, temperature ranges, pressure, flow rates, accuracy, resolution, response time, etc.
-   - Include material specifications, construction details, and build quality information
-   - Include connectivity options, communication protocols, interfaces, and ports
-   - Include certifications, standards compliance, and safety ratings (only if explicitly stated)
-   - Include environmental ratings (IP rating, operating temperature, humidity) only if explicitly mentioned
-   - Include warranty information, country of origin, and shipping details if present
-   - When you see table rows formatted as "| label | value |" or "key: value", extract them as specification pairs
-   - If a single parameter has multiple values (e.g. different modes/ranges/variants), list each as a SEPARATE spec row
-   - Copy numeric values and units EXACTLY as they appear in the source (do not convert units)
+SPECIFICATION EXTRACTION RULES:
+- Extract EVERY row from specification tables found in the source
+- Use the EXACT parameter name from the source as the "key" (e.g., "Electron gun", "Accelerating voltage", "Specimen cooling temperature")
+- Use the EXACT value from the source as the "value" (e.g., "Cold field emission gun", "300 kV, 200 kV", "100 K or less")
+- If a parameter has sub-parameters (indented under it), include BOTH the parent and child as separate specs
+- If there are multiple variants/modes listed, create a separate spec for each
+- Copy units exactly (kV, K, mm, °, etc.) — do NOT convert or normalize
+- Do NOT add any specification that is not explicitly written in the source
 
-2. PRODUCT NAME: Use ONLY the product model name/number as stated in the source
-   - Examples: "V800", "HydroSense 3000", "ProMax 500"
-   - Do NOT include the manufacturer in the name — it goes as the FIRST specification row
-   - If multiple model variants are listed, use the primary/main model name
+PRODUCT NAME RULES:
+- Use ONLY the model name/number from the source (e.g., "CRYO ARM 300 II", "JEM-3300")
+- Do NOT include the manufacturer in the name
+- The manufacturer goes as the first specification row with key "Manufacturer"
 
-3. DESCRIPTION: Write a comprehensive 3-5 sentence professional description
-   - Start with what the product IS (type/category)
-   - Include its primary function and key capabilities
-   - Mention its main applications if stated in source
-   - Highlight notable features or advantages if explicitly mentioned
-   - Use only facts from the source text
+DESCRIPTION RULES:
+- Write 3-5 professional sentences
+- Start with what the product IS
+- Include its main function and key capabilities as described in source
+- Only include applications/use cases that are explicitly mentioned
+- Do NOT add generic marketing language
 
-4. APPLICATION: Extract intended use cases and applications
-   - What industries or fields is it designed for?
-   - What specific tasks or processes does it perform?
-   - Include only applications explicitly mentioned in the source
+WHAT NOT TO DO:
+- Do NOT output "USB / RS-232 serial" unless the source literally says that
+- Do NOT output "CE / ISO 9001" unless the source literally says that
+- Do NOT output generic specs like "Operating range: 0-100%" for a scientific instrument
+- Do NOT guess interfaces, certifications, or standards
+- Do NOT add any information that requires inference or general knowledge
 
-ORDERING & ORGANIZATION:
-- Order specifications logically: Manufacturer → Model → General → Measurement/Performance → Electrical → Physical → Environmental → Connectivity → Certifications → Other
-- Group related specifications together
-- Keep spec "key" concise (≤ 50 chars) and "value" exact as written
-- If the source lists options/variants, include them all
+Return ONLY the JSON object. No markdown fences, no explanation, no thinking.
 
-AVOID:
-- Do NOT guess or infer any values not in the source
-- Do NOT add certifications or ratings not explicitly stated
-- Do NOT add features or capabilities not mentioned
-- Do NOT merge multiple parameters into one entry
-- Do NOT "correct" or "clarify" ambiguous values — use exact wording from source
-
-Return ONLY the JSON, no markdown fences, no explanation, no thinking.
-
-Product information:
+SOURCE TEXT:
 ---
 ${sourceText.substring(0, 25000)}
 ---`;
