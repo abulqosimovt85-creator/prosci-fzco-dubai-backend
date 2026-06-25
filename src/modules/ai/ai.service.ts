@@ -3,7 +3,6 @@ import {
   InternalServerErrorException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import Cerebras from '@cerebras/cerebras_cloud_sdk';
 import { Product } from '../../entities/product.entity';
 
 export interface ExtractedProduct {
@@ -16,14 +15,15 @@ export interface ExtractedProduct {
 
 @Injectable()
 export class AiService {
-  private cerebras: Cerebras;
+  private apiKey: string;
 
   constructor() {
-    const apiKey = process.env.CEREBRAS_API_KEY;
-    if (!apiKey) {
-      console.warn('CEREBRAS_API_KEY is not set — AI extraction will fail.');
+    this.apiKey = process.env.OPENROUTER_API_KEY ?? '';
+    if (!this.apiKey) {
+      console.warn(
+        'OPENROUTER_API_KEY is not set — AI extraction will fail.',
+      );
     }
-    this.cerebras = new Cerebras({ apiKey: apiKey ?? '' });
   }
 
   private isUrl(input: string): boolean {
@@ -38,17 +38,13 @@ export class AiService {
 
   private htmlToText(html: string): string {
     let text = html
-      // Remove entire script / style / noscript blocks
       .replace(/<script[\s\S]*?<\/script>/gi, '')
       .replace(/<style[\s\S]*?<\/style>/gi, '')
       .replace(/<noscript[\s\S]*?<\/noscript>/gi, '')
-      // Remove HTML comments
       .replace(/<!--[\s\S]*?-->/g, '')
-      // Remove meta and link tags
       .replace(/<meta[\s\S]*?>/gi, '')
       .replace(/<link[\s\S]*?>/gi, '');
 
-    // Preserve table cell separators so spec tables survive as key–value pairs
     text = text
       .replace(/<tr[^>]*>/gi, '\n')
       .replace(/<\/tr>/gi, '')
@@ -57,7 +53,6 @@ export class AiService {
       .replace(/<td[^>]*>/gi, ' | ')
       .replace(/<\/td>/gi, '');
 
-    // Block-level elements → newlines
     text = text
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(
@@ -66,7 +61,6 @@ export class AiService {
       )
       .replace(/<\/?(ul|ol|dl|table|thead|tbody|tfoot)[^>]*>/gi, '\n');
 
-    // Decode common HTML entities
     text = text
       .replace(/&nbsp;/gi, ' ')
       .replace(/&amp;/gi, '&')
@@ -84,10 +78,8 @@ export class AiService {
         String.fromCharCode(parseInt(hex, 16)),
       );
 
-    // Strip all remaining tags
     text = text.replace(/<[^>]+>/g, '');
 
-    // Clean up whitespace while keeping meaningful newlines
     text = text
       .split('\n')
       .map((line) => line.replace(/[ \t]+/g, ' ').trim())
@@ -147,14 +139,79 @@ export class AiService {
     }
   }
 
+  private async callOpenRouter(
+    prompt: string,
+    maxTokens: number,
+  ): Promise<string> {
+    const maxRetries = 3;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch(
+          'https://openrouter.ai/api/v1/chat/completions',
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': 'https://psci-sol.com',
+              'X-OpenRouter-Title': 'Proscient Product Catalog',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash',
+              messages: [{ role: 'user', content: prompt }],
+              max_tokens: maxTokens,
+              temperature: 0,
+            }),
+          },
+        );
+
+        if (!response.ok) {
+          const body = await response.text();
+          if (response.status === 429 && attempt < maxRetries) {
+            await new Promise((r) =>
+              setTimeout(r, 2000 * Math.pow(2, attempt)),
+            );
+            continue;
+          }
+          if (response.status === 429) {
+            throw new ServiceUnavailableException(
+              'OpenRouter API is rate limiting. Please try again in a minute.',
+            );
+          }
+          throw new InternalServerErrorException(
+            `OpenRouter API error (${response.status}): ${body.substring(0, 300)}`,
+          );
+        }
+
+        const data = (await response.json()) as any;
+        const content = data?.choices?.[0]?.message?.content ?? '';
+        return content;
+      } catch (err) {
+        if (err instanceof InternalServerErrorException || err instanceof ServiceUnavailableException) {
+          throw err;
+        }
+        const msg = (err as Error).message || '';
+        if (msg.includes('429') && attempt < maxRetries) {
+          await new Promise((r) =>
+            setTimeout(r, 2000 * Math.pow(2, attempt)),
+          );
+          continue;
+        }
+        throw new InternalServerErrorException(
+          `OpenRouter API error: ${msg}`,
+        );
+      }
+    }
+    return '';
+  }
+
   async extractProduct(input: string): Promise<Partial<Product>> {
-    if (!process.env.CEREBRAS_API_KEY) {
+    if (!this.apiKey) {
       throw new InternalServerErrorException(
-        'CEREBRAS_API_KEY environment variable is not set.',
+        'OPENROUTER_API_KEY environment variable is not set.',
       );
     }
 
-    // If the input is a URL, fetch the page and use its text content
     let sourceText = input.trim();
     let sourceNote = '';
     if (this.isUrl(sourceText)) {
@@ -218,48 +275,19 @@ WHAT NOT TO DO:
 
 Return ONLY the JSON object. No markdown fences, no explanation, no thinking.
 
-SOURCE TEXT:
+${sourceNote ? `${sourceNote}\n\n` : ''}SOURCE TEXT:
 ---
 ${sourceText.substring(0, 25000)}
 ---`;
 
-    let rawText = '';
-    const maxRetries = 3;
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        const completion = (await this.cerebras.chat.completions.create({
-          messages: [{ role: 'user', content: prompt }],
-          model: 'qwen-3-235b-a22b-instruct-2507',
-          max_completion_tokens: 8192,
-          temperature: 0,
-          top_p: 1,
-          stream: false,
-        })) as any;
-        rawText = completion.choices?.[0]?.message?.content ?? '';
-        break;
-      } catch (err) {
-        const msg = (err as Error).message || '';
-        if (msg.includes('429') && attempt < maxRetries) {
-          // Exponential backoff: 2s, 4s, 8s
-          await new Promise((r) => setTimeout(r, 2000 * Math.pow(2, attempt)));
-          continue;
-        }
-        if (msg.includes('429')) {
-          throw new ServiceUnavailableException(
-            'Cerebras API is experiencing high traffic. Please try again in a minute.',
-          );
-        }
-        throw new InternalServerErrorException(`Cerebras API error: ${msg}`);
-      }
-    }
+    const rawText = await this.callOpenRouter(prompt, 8192);
 
     if (!rawText) {
       throw new InternalServerErrorException(
-        'Cerebras returned an empty response.',
+        'OpenRouter returned an empty response.',
       );
     }
 
-    // Strip markdown code fences if present
     const cleaned = rawText
       .replace(/^```(?:json)?\s*/i, '')
       .replace(/\s*```$/i, '')
@@ -274,7 +302,6 @@ ${sourceText.substring(0, 25000)}
       );
     }
 
-    // Convert specifications array to Record<string, string> for Product entity
     const specs: Record<string, string> = {};
     if (Array.isArray(parsed.specifications)) {
       parsed.specifications.forEach((s: any) => {
@@ -284,7 +311,6 @@ ${sourceText.substring(0, 25000)}
       });
     }
 
-    // Validate & normalise
     return {
       name: String(parsed.name ?? 'Generated Product').trim(),
       description: String(parsed.description ?? '').trim(),
