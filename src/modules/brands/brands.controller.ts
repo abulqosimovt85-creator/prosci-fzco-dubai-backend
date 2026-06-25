@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { BrandsService } from './brands.service';
 import { Brand } from '../../entities/brand.entity';
 
@@ -17,13 +27,18 @@ export class BrandsController {
   }
 
   @Post()
-  create(@Body() body: { id?: string; name: string; logo?: string }): Promise<Brand> {
+  create(
+    @Body() body: { id?: string; name: string; logo?: string },
+  ): Promise<Brand> {
     const slug = body.id || body.name.toLowerCase().replace(/\s+/g, '-');
     return this.brandsService.create(slug, body.name, body.logo || body.name);
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() body: { name: string; logo?: string }): Promise<Brand> {
+  update(
+    @Param('id') id: string,
+    @Body() body: { name: string; logo?: string },
+  ): Promise<Brand> {
     return this.brandsService.update(id, body.name, body.logo || body.name);
   }
 

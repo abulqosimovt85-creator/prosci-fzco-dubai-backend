@@ -4,10 +4,10 @@ import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
+
   // Set global API prefix
   app.setGlobalPrefix('api');
-  
+
   // Enable Cross-Origin Resource Sharing (CORS) for frontend React application
   app.enableCors({
     origin: '*', // In development allow any origin

@@ -37,7 +37,10 @@ export class InquiriesService {
     return this.inquiryRepo.save(inquiry);
   }
 
-  async updateStatus(id: string, status: 'pending' | 'in-contact' | 'archived'): Promise<Inquiry> {
+  async updateStatus(
+    id: string,
+    status: 'pending' | 'in-contact' | 'archived',
+  ): Promise<Inquiry> {
     const inquiry = await this.findOne(id);
     inquiry.status = status;
     return this.inquiryRepo.save(inquiry);
