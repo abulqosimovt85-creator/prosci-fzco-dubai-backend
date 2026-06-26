@@ -6,6 +6,7 @@ import { Brand } from './entities/brand.entity';
 import { Inquiry } from './entities/inquiry.entity';
 
 // Import feature modules
+import { AuthModule } from './modules/auth/auth.module';
 import { ProductsModule } from './modules/products/products.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { BrandsModule } from './modules/brands/brands.module';
@@ -39,6 +40,7 @@ import { UploadModule } from './modules/upload/upload.module';
             logging: false,
           },
     ),
+    AuthModule,
     ProductsModule,
     CategoriesModule,
     BrandsModule,

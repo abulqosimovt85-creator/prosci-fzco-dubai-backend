@@ -10,7 +10,7 @@ async function bootstrap() {
 
   // Enable Cross-Origin Resource Sharing (CORS) for frontend React application
   app.enableCors({
-    origin: '*', // In development allow any origin
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });

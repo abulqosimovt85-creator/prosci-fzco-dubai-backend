@@ -1,12 +1,14 @@
-import { Controller, Get, Post, Patch, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, UseGuards } from '@nestjs/common';
 import { InquiriesService } from './inquiries.service';
 import { Inquiry } from '../../entities/inquiry.entity';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('inquiries')
 export class InquiriesController {
   constructor(private readonly inquiriesService: InquiriesService) {}
 
   @Get()
+  @UseGuards(JwtAuthGuard)
   findAll(): Promise<Inquiry[]> {
     return this.inquiriesService.findAll();
   }
@@ -17,6 +19,7 @@ export class InquiriesController {
   }
 
   @Patch(':id/status')
+  @UseGuards(JwtAuthGuard)
   updateStatus(
     @Param('id') id: string,
     @Body() body: { status: 'pending' | 'in-contact' | 'archived' },

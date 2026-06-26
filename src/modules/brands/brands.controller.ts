@@ -8,9 +8,11 @@ import {
   Param,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { BrandsService } from './brands.service';
 import { Brand } from '../../entities/brand.entity';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('brands')
 export class BrandsController {
@@ -27,6 +29,7 @@ export class BrandsController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   create(
     @Body() body: { id?: string; name: string; logo?: string },
   ): Promise<Brand> {
@@ -35,6 +38,7 @@ export class BrandsController {
   }
 
   @Put(':id')
+  @UseGuards(JwtAuthGuard)
   update(
     @Param('id') id: string,
     @Body() body: { name: string; logo?: string },
@@ -43,6 +47,7 @@ export class BrandsController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string): Promise<void> {
     return this.brandsService.remove(id);

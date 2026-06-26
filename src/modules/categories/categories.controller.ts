@@ -8,9 +8,11 @@ import {
   Param,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { Category } from '../../entities/category.entity';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('categories')
 export class CategoriesController {
@@ -27,6 +29,7 @@ export class CategoriesController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   create(
     @Body() body: { id?: string; name: string; parentId?: string },
   ): Promise<Category> {
@@ -35,6 +38,7 @@ export class CategoriesController {
   }
 
   @Put(':id')
+  @UseGuards(JwtAuthGuard)
   update(
     @Param('id') id: string,
     @Body() body: { name: string },
@@ -43,6 +47,7 @@ export class CategoriesController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string): Promise<void> {
     return this.categoriesService.remove(id);
