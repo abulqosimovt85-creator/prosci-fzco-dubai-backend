@@ -11,25 +11,40 @@ export class CategoriesService {
   ) {}
 
   async findAll(): Promise<Category[]> {
-    return this.categoryRepo.find({ order: { name: 'ASC' } });
+    return this.categoryRepo.find({
+      relations: { parent: true },
+      order: { name: 'ASC' },
+    });
   }
 
   async findOne(id: string): Promise<Category> {
-    const category = await this.categoryRepo.findOne({ where: { id } });
+    const category = await this.categoryRepo.findOne({
+      where: { id },
+      relations: { parent: true, children: true },
+    });
     if (!category) {
       throw new NotFoundException(`Category with ID "${id}" not found`);
     }
     return category;
   }
 
-  async create(id: string, name: string): Promise<Category> {
+  async create(id: string, name: string, parentId?: string): Promise<Category> {
     const finalId = id.trim().toLowerCase().replace(/\s+/g, '-');
-    const existing = await this.categoryRepo.findOne({ where: { id: finalId } });
+    const existing = await this.categoryRepo.findOne({
+      where: { id: finalId },
+    });
+
     if (existing) {
       existing.name = name;
+      existing.parentId = parentId || null;
       return this.categoryRepo.save(existing);
     }
-    const category = this.categoryRepo.create({ id: finalId, name });
+
+    const category = this.categoryRepo.create({
+      id: finalId,
+      name,
+      parentId: parentId || null,
+    });
     return this.categoryRepo.save(category);
   }
 

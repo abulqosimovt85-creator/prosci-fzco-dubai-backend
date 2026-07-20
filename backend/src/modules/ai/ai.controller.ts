@@ -8,8 +8,9 @@ export class AiController {
 
   @Post('generate-product')
   generateProduct(
-    @Body() body: { name: string; category?: string },
+    @Body() body: { name?: string; category?: string; context?: string },
   ): Promise<Partial<Product>> {
-    return this.aiService.generateProduct(body.name, body.category || '');
+    const input = body.context || body.name || '';
+    return this.aiService.extractProduct(input);
   }
 }

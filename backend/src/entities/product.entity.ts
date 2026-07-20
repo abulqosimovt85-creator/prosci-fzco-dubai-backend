@@ -32,11 +32,17 @@ export class Product {
   images: string[];
 
   // Optional relations if we want to join, but we keep slugs inside
-  @ManyToOne(() => Category, (category) => category.products, { onDelete: 'SET NULL', nullable: true })
+  @ManyToOne(() => Category, (category) => category.products, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
   @JoinColumn({ name: 'categoryId' })
   categoryEntity: Category;
 
-  @ManyToOne(() => Brand, (brand) => brand.products, { onDelete: 'SET NULL', nullable: true })
+  @ManyToOne(() => Brand, (brand) => brand.products, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
   @JoinColumn({ name: 'brandId' })
   brandEntity: Brand;
 }

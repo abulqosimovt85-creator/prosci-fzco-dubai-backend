@@ -30,7 +30,11 @@ export class BrandsService {
       existing.logo = logo || name;
       return this.brandRepo.save(existing);
     }
-    const brand = this.brandRepo.create({ id: finalId, name, logo: logo || name });
+    const brand = this.brandRepo.create({
+      id: finalId,
+      name,
+      logo: logo || name,
+    });
     return this.brandRepo.save(brand);
   }
 

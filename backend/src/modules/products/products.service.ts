@@ -10,7 +10,7 @@ export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private productRepo: Repository<Product>,
-    
+
     @InjectRepository(Category)
     private categoryRepo: Repository<Category>,
 
@@ -23,7 +23,10 @@ export class ProductsService {
 
     if (category) {
       // Find category by slug or name to map ID properly
-      qb.andWhere('(LOWER(product.category) = LOWER(:category) OR product.categoryId = :category)', { category });
+      qb.andWhere(
+        '(LOWER(product.category) = LOWER(:category) OR product.categoryId = :category)',
+        { category },
+      );
     }
 
     if (search) {
@@ -47,13 +50,21 @@ export class ProductsService {
 
   async create(dto: Partial<Product>): Promise<Product> {
     const id = dto.id || `p-${Math.floor(1000 + Math.random() * 9000)}`;
-    
-    // Resolve entities if they exist for proper DB references
-    const categorySlug = dto.category ? dto.category.toLowerCase().replace(/\s+/g, '-') : '';
-    const brandSlug = dto.brand ? dto.brand.toLowerCase().replace(/\s+/g, '-') : '';
 
-    const categoryEntity = await this.categoryRepo.findOne({ where: { id: categorySlug } });
-    const brandEntity = await this.brandRepo.findOne({ where: { id: brandSlug } });
+    // Resolve entities if they exist for proper DB references
+    const categorySlug = dto.category
+      ? dto.category.toLowerCase().replace(/\s+/g, '-')
+      : '';
+    const brandSlug = dto.brand
+      ? dto.brand.toLowerCase().replace(/\s+/g, '-')
+      : '';
+
+    const categoryEntity = await this.categoryRepo.findOne({
+      where: { id: categorySlug },
+    });
+    const brandEntity = await this.brandRepo.findOne({
+      where: { id: brandSlug },
+    });
 
     const product = this.productRepo.create({
       id,
@@ -81,12 +92,16 @@ export class ProductsService {
     // Resolve entities if Category or Brand name has changed
     if (dto.category) {
       const categorySlug = dto.category.toLowerCase().replace(/\s+/g, '-');
-      const categoryEntity = await this.categoryRepo.findOne({ where: { id: categorySlug } });
+      const categoryEntity = await this.categoryRepo.findOne({
+        where: { id: categorySlug },
+      });
       if (categoryEntity) product.categoryEntity = categoryEntity;
     }
     if (dto.brand) {
       const brandSlug = dto.brand.toLowerCase().replace(/\s+/g, '-');
-      const brandEntity = await this.brandRepo.findOne({ where: { id: brandSlug } });
+      const brandEntity = await this.brandRepo.findOne({
+        where: { id: brandSlug },
+      });
       if (brandEntity) product.brandEntity = brandEntity;
     }
 
