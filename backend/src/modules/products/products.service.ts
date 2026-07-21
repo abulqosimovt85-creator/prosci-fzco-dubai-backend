@@ -22,23 +22,26 @@ export class ProductsService {
     const qb = this.productRepo.createQueryBuilder('product');
 
     if (category) {
-      // Find the category entity by ID (slug) to get its name
-      const catEntity = await this.categoryRepo.findOne({ where: { id: category } });
-      if (catEntity) {
-        // Find all subcategories of this category
-        const subcats = await this.categoryRepo.find({ where: { parentId: catEntity.id } });
-        const catNames = [catEntity.name, ...subcats.map(s => s.name)];
+      // Support comma-separated category IDs
+      const categoryIds = category.split(',').map(c => c.trim()).filter(Boolean);
+      const allCatNames: string[] = [];
 
-        // Also check for products that have "Parent > Child" format in their category field
-        const likePatterns = catNames.map(name => `%${name}%`);
-        const conditions = catNames.map((_, i) => `LOWER(product.category) LIKE LOWER(:cat${i})`);
+      for (const catId of categoryIds) {
+        const catEntity = await this.categoryRepo.findOne({ where: { id: catId } });
+        if (catEntity) {
+          allCatNames.push(catEntity.name);
+          const subcats = await this.categoryRepo.find({ where: { parentId: catEntity.id } });
+          allCatNames.push(...subcats.map(s => s.name));
+        } else {
+          allCatNames.push(catId);
+        }
+      }
+
+      if (allCatNames.length > 0) {
+        const conditions = allCatNames.map((_, i) => `LOWER(product.category) LIKE LOWER(:cat${i})`);
         const params: Record<string, string> = {};
-        catNames.forEach((name, i) => { params[`cat${i}`] = `%${name}%`; });
-
+        allCatNames.forEach((name, i) => { params[`cat${i}`] = `%${name}%`; });
         qb.andWhere(`(${conditions.join(' OR ')})`, params);
-      } else {
-        // Fallback: try direct text match
-        qb.andWhere('LOWER(product.category) = LOWER(:category)', { category });
       }
     }
 
