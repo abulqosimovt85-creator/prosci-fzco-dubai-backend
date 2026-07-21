@@ -22,11 +22,24 @@ export class ProductsService {
     const qb = this.productRepo.createQueryBuilder('product');
 
     if (category) {
-      // Find category by slug or name to map ID properly
-      qb.andWhere(
-        '(LOWER(product.category) = LOWER(:category) OR product.categoryId = :category)',
-        { category },
-      );
+      // Find the category entity by ID (slug) to get its name
+      const catEntity = await this.categoryRepo.findOne({ where: { id: category } });
+      if (catEntity) {
+        // Find all subcategories of this category
+        const subcats = await this.categoryRepo.find({ where: { parentId: catEntity.id } });
+        const catNames = [catEntity.name, ...subcats.map(s => s.name)];
+
+        // Also check for products that have "Parent > Child" format in their category field
+        const likePatterns = catNames.map(name => `%${name}%`);
+        const conditions = catNames.map((_, i) => `LOWER(product.category) LIKE LOWER(:cat${i})`);
+        const params: Record<string, string> = {};
+        catNames.forEach((name, i) => { params[`cat${i}`] = `%${name}%`; });
+
+        qb.andWhere(`(${conditions.join(' OR ')})`, params);
+      } else {
+        // Fallback: try direct text match
+        qb.andWhere('LOWER(product.category) = LOWER(:category)', { category });
+      }
     }
 
     if (search) {
