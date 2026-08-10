@@ -18,7 +18,7 @@ export class ProductsService {
     private brandRepo: Repository<Brand>,
   ) {}
 
-  async findAll(search = '', category = ''): Promise<Product[]> {
+  async findAll(search = '', category = '', brand = ''): Promise<Product[]> {
     const qb = this.productRepo.createQueryBuilder('product');
 
     if (category) {
@@ -41,6 +41,28 @@ export class ProductsService {
         const conditions = allCatNames.map((_, i) => `LOWER(product.category) LIKE LOWER(:cat${i})`);
         const params: Record<string, string> = {};
         allCatNames.forEach((name, i) => { params[`cat${i}`] = `%${name}%`; });
+        qb.andWhere(`(${conditions.join(' OR ')})`, params);
+      }
+    }
+
+    if (brand) {
+      // Support comma-separated brand IDs
+      const brandIds = brand.split(',').map(b => b.trim()).filter(Boolean);
+      const allBrandNames: string[] = [];
+
+      for (const brandId of brandIds) {
+        const brandEntity = await this.brandRepo.findOne({ where: { id: brandId } });
+        if (brandEntity) {
+          allBrandNames.push(brandEntity.name);
+        } else {
+          allBrandNames.push(brandId);
+        }
+      }
+
+      if (allBrandNames.length > 0) {
+        const conditions = allBrandNames.map((_, i) => `LOWER(product.brand) LIKE LOWER(:brand${i})`);
+        const params: Record<string, string> = {};
+        allBrandNames.forEach((name, i) => { params[`brand${i}`] = `%${name}%`; });
         qb.andWhere(`(${conditions.join(' OR ')})`, params);
       }
     }
