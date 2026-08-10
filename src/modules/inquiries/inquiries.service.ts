@@ -77,6 +77,7 @@ export class InquiriesService {
               <tr><td style="padding:8px;font-weight:bold;color:#444;">Email</td><td style="padding:8px;">${inquiry.email}</td></tr>
               <tr><td style="padding:8px;font-weight:bold;color:#444;">Phone</td><td style="padding:8px;">${inquiry.phone || 'Not provided'}</td></tr>
               <tr><td style="padding:8px;font-weight:bold;color:#444;">Industry</td><td style="padding:8px;">${inquiry.industry}</td></tr>
+              ${inquiry.productId ? `<tr><td style="padding:8px;font-weight:bold;color:#444;">Product</td><td style="padding:8px;"><a href="https://psci-sol.com/products/${inquiry.productId}" style="color:#006a65;">${inquiry.productId}</a></td></tr>` : ''}
               <tr><td style="padding:8px;font-weight:bold;color:#444;">Message</td><td style="padding:8px;">${inquiry.message}</td></tr>
             </table>
           </div>
