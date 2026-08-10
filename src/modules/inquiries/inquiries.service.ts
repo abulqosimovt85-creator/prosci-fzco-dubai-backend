@@ -75,9 +75,8 @@ export class InquiriesService {
               <tr><td style="padding:8px;font-weight:bold;color:#444;">Name</td><td style="padding:8px;">${inquiry.name}</td></tr>
               <tr><td style="padding:8px;font-weight:bold;color:#444;">Company</td><td style="padding:8px;">${inquiry.company}</td></tr>
               <tr><td style="padding:8px;font-weight:bold;color:#444;">Email</td><td style="padding:8px;">${inquiry.email}</td></tr>
-              <tr><td style="padding:8px;font-weight:bold;color:#444;">Phone</td><td style="padding:8px;">${inquiry.phone || 'N/A'}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold;color:#444;">Phone</td><td style="padding:8px;">${inquiry.phone || 'Not provided'}</td></tr>
               <tr><td style="padding:8px;font-weight:bold;color:#444;">Industry</td><td style="padding:8px;">${inquiry.industry}</td></tr>
-              <tr><td style="padding:8px;font-weight:bold;color:#444;">Budget</td><td style="padding:8px;">${inquiry.budget}</td></tr>
               <tr><td style="padding:8px;font-weight:bold;color:#444;">Message</td><td style="padding:8px;">${inquiry.message}</td></tr>
             </table>
           </div>
