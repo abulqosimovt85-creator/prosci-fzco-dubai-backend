@@ -47,34 +47,59 @@ export class InquiriesService {
   }
 
   private async sendEmailAsync(inquiry: Inquiry): Promise<void> {
+    this.logger.log('Attempting to send inquiry email...');
+
     const smtpHost = process.env.SMTP_HOST;
     const smtpUser = process.env.SMTP_USER;
     const smtpPass = process.env.SMTP_PASS;
+    const smtpPort = process.env.SMTP_PORT || '465';
+    const notifyEmail = process.env.NOTIFY_EMAIL || 'info@psci-sol.com';
+
+    this.logger.log(`SMTP config: host=${smtpHost}, port=${smtpPort}, user=${smtpUser ? '***' : 'MISSING'}, pass=${smtpPass ? '***' : 'MISSING'}, to=${notifyEmail}`);
 
     if (!smtpHost || !smtpUser || !smtpPass) {
-      this.logger.warn('SMTP not configured — skipping email');
+      this.logger.warn('SMTP not configured — skipping email. Set SMTP_HOST, SMTP_USER, SMTP_PASS env vars.');
       return;
     }
 
     // Dynamic import to avoid crash if nodemailer is not installed
-    const nodemailer = await import('nodemailer').catch(() => null);
-    if (!nodemailer) {
-      this.logger.warn('nodemailer not available — skipping email');
+    let nodemailer;
+    try {
+      nodemailer = await import('nodemailer');
+      this.logger.log('nodemailer imported successfully');
+    } catch (err) {
+      this.logger.error('Failed to import nodemailer', err);
       return;
     }
 
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: parseInt(process.env.SMTP_PORT || '465'),
-      secure: parseInt(process.env.SMTP_PORT || '465') === 465,
-      auth: { user: smtpUser, pass: smtpPass },
-    });
+    let transporter;
+    try {
+      transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: parseInt(smtpPort),
+        secure: parseInt(smtpPort) === 465,
+        auth: { user: smtpUser, pass: smtpPass },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+      });
+      this.logger.log('SMTP transporter created');
+    } catch (err) {
+      this.logger.error('Failed to create SMTP transporter', err);
+      return;
+    }
 
-    const toEmail = process.env.NOTIFY_EMAIL || 'info@psci-sol.com';
+    try {
+      this.logger.log('Verifying SMTP connection...');
+      await transporter.verify();
+      this.logger.log('SMTP connection verified successfully');
+    } catch (err) {
+      this.logger.error('SMTP connection verification failed', err);
+      return;
+    }
 
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: `"ProScient Website" <${smtpUser}>`,
-      to: toEmail,
+      to: notifyEmail,
       replyTo: inquiry.email,
       subject: `New Inquiry from ${inquiry.name} - ${inquiry.industry || 'General'}`,
       html: `
@@ -93,7 +118,7 @@ export class InquiriesService {
       `,
     });
 
-    this.logger.log(`Inquiry email sent to ${toEmail}`);
+    this.logger.log(`Email sent successfully! Message ID: ${info.messageId}`);
   }
 
   async updateStatus(
