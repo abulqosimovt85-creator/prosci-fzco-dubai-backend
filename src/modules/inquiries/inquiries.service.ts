@@ -79,8 +79,10 @@ export class InquiriesService {
         port: parseInt(smtpPort),
         secure: parseInt(smtpPort) === 465,
         auth: { user: smtpUser, pass: smtpPass },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        tls: { rejectUnauthorized: false },
+        socketOptions: { family: 4 },
       });
       this.logger.log('SMTP transporter created');
     } catch (err) {
