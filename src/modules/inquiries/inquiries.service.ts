@@ -76,13 +76,12 @@ export class InquiriesService {
     try {
       transporter = nodemailer.createTransport({
         host: smtpHost,
-        port: parseInt(smtpPort),
-        secure: parseInt(smtpPort) === 465,
+        port: 587,
+        secure: false,
         auth: { user: smtpUser, pass: smtpPass },
         connectionTimeout: 15000,
         greetingTimeout: 15000,
-        tls: { rejectUnauthorized: false },
-        socketOptions: { family: 4 },
+        tls: { rejectUnauthorized: false, ciphers: 'SSLv3' },
       });
       this.logger.log('SMTP transporter created');
     } catch (err) {
