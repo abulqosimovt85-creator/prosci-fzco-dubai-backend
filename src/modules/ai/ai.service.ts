@@ -178,6 +178,11 @@ export class AiService {
               'OpenRouter API is rate limiting. Please try again in a minute.',
             );
           }
+          if (response.status === 402) {
+            throw new ServiceUnavailableException(
+              'OpenRouter API credits exhausted. Please add credits at https://openrouter.ai/settings/credits',
+            );
+          }
           throw new InternalServerErrorException(
             `OpenRouter API error (${response.status}): ${body.substring(0, 300)}`,
           );
@@ -280,7 +285,7 @@ ${sourceNote ? `${sourceNote}\n\n` : ''}SOURCE TEXT:
 ${sourceText.substring(0, 25000)}
 ---`;
 
-    const rawText = await this.callOpenRouter(prompt, 8192);
+    const rawText = await this.callOpenRouter(prompt, 4096);
 
     if (!rawText) {
       throw new InternalServerErrorException(
